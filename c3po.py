@@ -94,7 +94,7 @@ def smsMsg(foaf, to, msg, tryJabber=False):
 
     num = foaf.getSms(to)
     emailMsg(foaf, num, msg,
-             from_='c3po',
+             from_=Bot.senderEmail,
              )
     return "Sent to %s" % num
 
@@ -134,7 +134,7 @@ class Root(cyclone.web.RequestHandler):
         func = {'email' : emailMsg,
                 'xmpp' :  xmppMsg,
                 'sms' : smsMsg}[mode]
-        return func(self.settings.foaf, user, msg)
+        self.write(func(self.settings.foaf, user, msg))
 
 if __name__ == "__main__":
     verboseLogging(True)
