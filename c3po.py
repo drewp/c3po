@@ -1,4 +1,6 @@
 import sys
+from chatinterface import ChatInterface
+
 import cyclone, cyclone.web
 from rdflib import URIRef, Namespace, Variable, Literal
 from rdflib import Graph
@@ -68,7 +70,7 @@ class FoafStore(object):
 
         return addr
 
-def emailMsg(foaf, to, msg, from_=None, useSubject=True):
+def emailMsg(settings, foaf, to, msg, from_=None, useSubject=True):
     if from_ is None:
         from_ = Bot.senderEmail
 
@@ -85,7 +87,7 @@ def emailMsg(foaf, to, msg, from_=None, useSubject=True):
 
     return "Mailed %s" % m['To']
 
-def smsMsg(foaf, to, msg, tryJabber=False):
+def smsMsg(settings, foaf, to, msg, tryJabber=False):
     if tryJabber:
         try:
             xmppMsg(foaf, to, msg, mustBeAvailable=True)
@@ -100,7 +102,7 @@ def smsMsg(foaf, to, msg, tryJabber=False):
              )
     return "Sent to %s" % num
 
-def xmppMsg(foaf, to, msg, mustBeAvailable=False):
+def xmppMsg(settings, foaf, to, msg, mustBeAvailable=False):
     """
     if mustBeAvailable is set, you'll get an exception if the user
     doesn't have an available presence (so you could fall back on
@@ -121,6 +123,9 @@ def xmppMsg(foaf, to, msg, mustBeAvailable=False):
     cl.disconnect()
     return "Jabbered %s" % to
 
+def slackMsg(settings, foaf, to, msg):
+    settings.chat.sendMsg(bot, URIRef(to), msg)
+
 class Root(cyclone.web.RequestHandler):
 
     def get(self):
@@ -135,11 +140,20 @@ class Root(cyclone.web.RequestHandler):
 
         func = {'email' : emailMsg,
                 'xmpp' :  xmppMsg,
-                'sms' : smsMsg}[mode]
-        self.write(func(self.settings.foaf, user, msg))
+                'sms' : smsMsg,
+                'slack' : slackMsg}[mode]
+        self.write(func(self.settings, self.settings.foaf, user, msg))
 
 if __name__ == "__main__":
     verboseLogging(True)
+
+    def onMsg(bot, fromUser, msg):
+        pass
+
+    houseBot = 'houseBot'
+    chat = ChatInterface(onMsg)
+    chat.initBot(houseBot, token=Bot.slackAuthToken)
+
     foaf = FoafStore(sibpath(__file__, 'accounts.n3'))
     reactor.listenTCP(
         9040,
@@ -147,6 +161,7 @@ if __name__ == "__main__":
             (r'/', Root),
         ],
                                 template_path='.',
+                                chat=chat,
                                 foaf=foaf),
         interface='::')
     reactor.run()
