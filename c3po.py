@@ -1,21 +1,11 @@
-#!/usr/bin/python2.7
-import warnings
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-import xmpp
-warnings.resetwarnings()
-import web, sys
+import sys
+import cyclone, cyclone.web
 from rdflib import URIRef, Namespace, Variable, Literal
 from rdflib import Graph
 from twisted.python.util import sibpath
-
-import rdflib
-from rdflib import plugin
-plugin.register(
-  "sparql", rdflib.query.Processor,
-  "rdfextras.sparql.processor", "Processor")
-plugin.register(
-  "sparql", rdflib.query.Result,
-  "rdfextras.sparql.query", "SPARQLQueryResult") 
+from configs import Bot
+from twisted.internet import reactor
+from standardservice.logsetup import log, verboseLogging
 
 FOAF = Namespace("http://xmlns.com/foaf/0.1/")
 SMS = Namespace("http://bigasterisk.com/ns/sms/")
@@ -64,7 +54,7 @@ class FoafStore(object):
                 initNs=dict(foaf=FOAF, sms=SMS)))
             if not rows:
                 # bug: maybe we know about the user uri, just don't have a
-                # phone number! 
+                # phone number!
                 raise ValueError("no sms gateway found for %s" % user)
 
             addr1, addr2 = rows[0][1].split('@')
@@ -75,26 +65,18 @@ class FoafStore(object):
             addr = addr1.replace('n', n) + '@' + addr2
         except ValueError:
             addr = user
-            
-        return addr
 
-# move this data to the account store
-class Bot(object):
-    smtpHost = 'bigasterisk.com'
-    senderEmail = 'drewp@bigasterisk.com'
-    jid = "house@jabber.bigasterisk.com"
-    jabberHost = 'jabber.bigasterisk.com'
-    jabberPassword = open("house-jabber-password").read().strip()
+        return addr
 
 def emailMsg(foaf, to, msg, from_=None):
     if from_ is None:
         from_ = Bot.senderEmail
-        
+
     m = MIMEText(msg)
     m['From'] = from_
     m['To'] = foaf.getEmail(to)
     short = msg[:60] + ("..." if len(msg) > 63 else "")
-    m['Subject'] = '%s [c3po]' % short
+    m['Subject'] = '%s%s' % (short, Bot.subjectTag)
 
     mailServer = smtplib.SMTP(Bot.smtpHost)
     mailServer.sendmail(Bot.senderEmail, [m['To']], m.as_string())
@@ -106,10 +88,10 @@ def smsMsg(foaf, to, msg, tryJabber=False):
     if tryJabber:
         try:
             xmppMsg(foaf, to, msg, mustBeAvailable=True)
-            return "Sent via jabber to %s" % num
+            return "Sent via jabber to %s" % to
         except ValueError:
             pass
-        
+
     num = foaf.getSms(to)
     emailMsg(foaf, num, msg,
              from_='c3po',
@@ -137,39 +119,32 @@ def xmppMsg(foaf, to, msg, mustBeAvailable=False):
     cl.disconnect()
     return "Jabbered %s" % to
 
-class Root(object):
-    def GET(self):
-        return ('''<html><body>
-        <form method="post" action="">
-            <div>User address or URI: <input name="user"/></div>
-            <div>Message: <input name="msg"/></div>
-            <div>Preferred mode:
-            <select name="mode">
-                <option>xmpp</option>
-                <option>email</option>
-                <option>sms</option>
-            </select></div>
-            <div><input type="submit"/></div>
-        </form>
-        </body></html>
-        ''')
-        
-    def POST(self):
-        i = web.input()
-        user = i['user']
-        msg = i['msg']
-        mode = i['mode']
+class Root(cyclone.web.RequestHandler):
+
+    def get(self):
+        self.render('index.html')
+
+    def post(self):
+        user = self.get_argument('user')
+        msg = self.get_argument('msg')
+        mode = self.get_argument('mode')
         if not user or not msg or not mode:
             raise ValueError("missing user, msg, or mode")
 
         func = {'email' : emailMsg,
                 'xmpp' :  xmppMsg,
                 'sms' : smsMsg}[mode]
-        return func(foaf, user, msg)
- 
-if __name__ == "__main__":
-    foaf = FoafStore(sibpath(__file__, 'accounts.n3'))
-    sys.argv.append("9040")
-    app = web.application((r'/', 'Root'), globals(), autoreload=False)
-    app.run()
+        return func(self.settings.foaf, user, msg)
 
+if __name__ == "__main__":
+    verboseLogging(True)
+    foaf = FoafStore(sibpath(__file__, 'accounts.n3'))
+    reactor.listenTCP(
+        9040,
+        cyclone.web.Application([
+            (r'/', Root),
+        ],
+                                template_path='.',
+                                foaf=foaf),
+        interface='::')
+    reactor.run()

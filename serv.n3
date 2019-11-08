@@ -1,0 +1,16 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+serv:c3po a :Service;
+      :path "/c3po/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9040;
+      :prodDockerFlags (
+      "-p" "9040:9040"
+      "--net=host");
+      :localDockerFlags ("-v" "`pwd`:/opt");
+      :localRunCmdline ("python3" "c3po.py" "-v");
+      :dockerFile "Dockerfile"
+.
