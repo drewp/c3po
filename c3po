@@ -93,6 +93,8 @@ def emailMsg(foaf, to, msg, from_=None):
     m = MIMEText(msg)
     m['From'] = from_
     m['To'] = foaf.getEmail(to)
+    short = msg[:60] + ("..." if len(msg) > 63 else "")
+    m['Subject'] = '%s [c3po]' % short
 
     mailServer = smtplib.SMTP(Bot.smtpHost)
     mailServer.sendmail(Bot.senderEmail, [m['To']], m.as_string())
@@ -168,6 +170,6 @@ class Root(object):
 if __name__ == "__main__":
     foaf = FoafStore(sibpath(__file__, 'accounts.n3'))
     sys.argv.append("9040")
-    app = web.application((r'/', 'Root'), globals())
+    app = web.application((r'/', 'Root'), globals(), autoreload=False)
     app.run()
 
