@@ -68,7 +68,7 @@ class FoafStore(object):
 
         return addr
 
-def emailMsg(foaf, to, msg, from_=None):
+def emailMsg(foaf, to, msg, from_=None, useSubject=True):
     if from_ is None:
         from_ = Bot.senderEmail
 
@@ -76,7 +76,8 @@ def emailMsg(foaf, to, msg, from_=None):
     m['From'] = from_
     m['To'] = foaf.getEmail(to)
     short = msg[:60] + ("..." if len(msg) > 63 else "")
-    m['Subject'] = '%s%s' % (short, Bot.subjectTag)
+    if useSubject:
+        m['Subject'] = '%s%s' % (short, Bot.subjectTag)
 
     mailServer = smtplib.SMTP(Bot.smtpHost)
     mailServer.sendmail(Bot.senderEmail, [m['To']], m.as_string())
@@ -95,6 +96,7 @@ def smsMsg(foaf, to, msg, tryJabber=False):
     num = foaf.getSms(to)
     emailMsg(foaf, num, msg,
              from_=Bot.senderEmail,
+             useSubject=False,
              )
     return "Sent to %s" % num
 
