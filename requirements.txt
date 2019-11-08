@@ -1,0 +1,6 @@
+isodate==0.5.4
+rdflib==3.2.1
+Twisted==15.5.0
+web.py==0.37
+xmpppy==0.5.0rc1
+zope.interface==4.1.3
