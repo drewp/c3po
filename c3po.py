@@ -124,7 +124,7 @@ def xmppMsg(settings, foaf, to, msg, mustBeAvailable=False):
     return "Jabbered %s" % to
 
 def slackMsg(settings, foaf, to, msg):
-    settings.chat.sendMsg(bot, URIRef(to), msg)
+    settings.chat.sendMsg(houseBot, URIRef(to), msg)
 
 class Root(cyclone.web.RequestHandler):
 

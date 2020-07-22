@@ -1,8 +1,11 @@
-FROM bang6:5000/base_x86
+FROM bang5:5000/base_x86
 
 WORKDIR /opt
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+
+# multi-index fix
+RUN pip3 install -U pip
 
 COPY requirements.txt ./
 RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements.txt
