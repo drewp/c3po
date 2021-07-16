@@ -1,11 +1,11 @@
-Twisted==19.7.0
-cyclone
+Twisted==21.2.0
+cyclone==1.3
 isodate==0.6.0
 rdflib==4.2.2
 #xmpppy==0.5.0rc1
-service_identity==18.1.0
+service_identity==21.1.0
 slack-sansio==1.1.0
-aiohttp==3.6.2
+aiohttp==3.7.4
 
 standardservice==0.6.0
 
